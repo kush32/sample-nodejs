@@ -1,41 +1,46 @@
-var createError = require('http-errors');
-var express = require('express');
-var path = require('path');
-var cookieParser = require('cookie-parser');
-var logger = require('morgan');
+const express = require('express');
+const fileUpload = require('express-fileupload');
 
-var indexRouter = require('./routes/index');
-// var usersRouter = require('./routes/users');
+const app = express();
+const port = process.env.PORT;
 
-var app = express();
+app.use(fileUpload());
 
-// view engine setup
-app.set('views', path.join(__dirname, 'views'));
-app.set('view engine', 'pug');
-
-app.use(logger('dev'));
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
-app.use(cookieParser());
-app.use(express.static(path.join(__dirname, 'public')));
-
-app.use('/', indexRouter);
-// app.use('/users', usersRouter);
-
-// catch 404 and forward to error handler
-app.use(function(req, res, next) {
-  next(createError(404));
+app.get('/', (req, res) => {
+  console.log(req.url);
+  res.sendFile(__dirname + '/views/index.html');
 });
 
-// error handler
-app.use(function(err, req, res, next) {
-  // set locals, only providing error in development
-  res.locals.message = err.message;
-  res.locals.error = req.app.get('env') === 'development' ? err : {};
+app.post('/upload', function(req, res) {
+  if (Object.keys(req.files).length == 0) {
+    return res.status(400).send('No files were uploaded.');
+  }
 
-  // render the error page
-  res.status(err.status || 500);
-  res.render('error');
+  // The name of the input field (i.e. "firmware") is used to retrieve the uploaded file
+  let firmware = req.files.firmware;
+
+  if (firmware.name !== 'firmware.bin') {
+    res.send('Filename should be firmware.bin');
+    return;
+  }
+
+  // Use the mv() method to place the file somewhere on your server
+  firmware.mv(__dirname + '/public/update.bin', function(err) {
+    if (err) return res.status(500).send(err);
+
+    res.send('File uploaded!');
+  });
 });
+
+app.get('/update', (req, res) => {
+  let date = new Date();
+  console.log(date);
+
+  let file = __dirname + '/public/update.bin';
+
+  res.download(file);
+});
+
+
 
 module.exports = app;
